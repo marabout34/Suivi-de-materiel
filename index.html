@@ -29,7 +29,7 @@
             margin-bottom: 15px;
             color: #24292e;
         }
-        input[type="text"] {
+        input[type="text"], input[type="date"] {
             width: 100%;
             padding: 12px;
             font-size: 1rem;
@@ -51,15 +51,78 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: grab;
+            user-select: none;
+            touch-action: manipulation;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .card:active {
+            cursor: grabbing;
+        }
+        .card.dragging {
+            opacity: 0.5;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            transform: scale(1.02);
+        }
+        .drag-handle {
+            font-size: 1.2rem;
+            color: #aaa;
+            margin-right: 10px;
+            cursor: grab;
+        }
+        .card-content-wrapper {
+            display: flex;
+            align-items: center;
+            flex: 1;
         }
         .card-info h3 {
             margin: 0 0 5px 0;
             font-size: 1.1rem;
         }
         .card-info p {
-            margin: 0;
-            color: #6c757d;
-            font-size: 0.9rem;
+            margin: 3px 0;
+            font-size: 0.85rem;
+            color: #555;
+        }
+        .tags-container {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        /* Badges */
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+        }
+        .badge-pc { background-color: #007bff; }
+        .badge-tablette { background-color: #17a2b8; }
+        .badge-telephone, .badge-smartphone { background-color: #6f42c1; }
+        .badge-casque { background-color: #fd7e14; }
+
+        .badge-recu { background-color: #28a745; }
+        .badge-a-remettre { background-color: #17a2b8; }
+        .badge-a-restituer { background-color: #ffc107; color: #333; }
+        .badge-non-restituable { background-color: #6c757d; }
+        .badge-restitue { background-color: #20c997; }
+
+        .card-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
         }
         .btn-delete {
             background: #dc3545;
@@ -68,13 +131,15 @@
             padding: 6px 10px;
             border-radius: 6px;
             cursor: pointer;
+            font-size: 0.85rem;
         }
         .empty-msg {
             color: #777;
             text-align: center;
             margin: 20px 0;
         }
-        /* Style Modal pour l'ajout */
+        
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -90,9 +155,38 @@
             padding: 20px;
             border-radius: 12px;
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .modal-content h2 { margin-top: 0; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .checkbox-grid label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
         .modal-actions {
             display: flex;
             justify-content: flex-end;
@@ -109,7 +203,6 @@
         .btn-primary { background: #007bff; color: white; }
         .btn-secondary { background: #6c757d; color: white; }
         
-        /* Barre d'actions (Ajout, Export, Import) */
         .action-bar {
             display: flex;
             gap: 8px;
@@ -138,13 +231,12 @@
 <div class="container">
     <h1>Suivi Matériel</h1>
     
-    <input type="text" id="searchInput" placeholder="Rechercher une personne ou un matériel..." oninput="filtrerFiches()">
+    <input type="text" id="searchInput" placeholder="Rechercher une personne, un matériel ou une date..." oninput="filtrerFiches()">
     
     <div id="contentArea" class="list-container">
         <!-- Les fiches s'afficheront ici -->
     </div>
 
-    <!-- Barre regroupant le bouton +, Export et Import -->
     <div class="action-bar">
         <button class="btn-action btn-add-main" onclick="ouvrirModal()">+ Ajouter</button>
         <button class="btn-action btn-export" onclick="exporterDonnees()">Exporter</button>
@@ -153,21 +245,54 @@
     </div>
 </div>
 
-<!-- Fenêtre d'ajout (Modal) -->
 <div id="addModal" class="modal">
     <div class="modal-content">
-        <h2>Ajouter une personne</h2>
-        <input type="text" id="nomInput" placeholder="Nom et Prénom">
-        <input type="text" id="materielInput" placeholder="Matériel (ex: PC, Clé, Badge...)">
+        <h2 id="modalTitle">Ajouter une personne</h2>
+        
+        <input type="hidden" id="editIndex" value="-1">
+
+        <div class="form-group">
+            <label>Nom et Prénom :</label>
+            <input type="text" id="nomInput" placeholder="Ex: Dupont Jean">
+        </div>
+
+        <div class="form-group">
+            <label>Matériel(s) (Sélectionnez) :</label>
+            <div class="checkbox-grid">
+                <label><input type="checkbox" name="materiel" value="PC"> PC</label>
+                <label><input type="checkbox" name="materiel" value="Tablette"> Tablette</label>
+                <label><input type="checkbox" name="materiel" value="Téléphone"> Téléphone</label>
+                <label><input type="checkbox" name="materiel" value="Smartphone"> Smartphone</label>
+                <label><input type="checkbox" name="materiel" value="Casque"> Casque</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Statut :</label>
+            <select id="statutInput">
+                <option value="reçu">Reçu</option>
+                <option value="à remettre">À remettre</option>
+                <option value="à restituer">À restituer</option>
+                <option value="non restituable">Non restituable</option>
+                <option value="restitué">Restitué</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Date :</label>
+            <input type="date" id="dateInput">
+        </div>
+
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
-            <button class="btn btn-primary" onclick="ajouterFiche()">Enregistrer</button>
+            <button class="btn btn-primary" onclick="enregistrerFiche()">Enregistrer</button>
         </div>
     </div>
 </div>
 
 <script>
     let fiches = JSON.parse(localStorage.getItem('suivi_materiel_fiches')) || [];
+    let draggedIndex = null;
 
     function sauvegarder() {
         localStorage.setItem('suivi_materiel_fiches', JSON.stringify(fiches));
@@ -179,27 +304,120 @@
         contentArea.innerHTML = '';
 
         if (fichesAffichees.length === 0) {
-            contentArea.innerHTML = '<p class="empty-msg">Aucune fiche enregistrée. Appuyez sur **+ Ajouter** ci-dessous.</p>';
+            contentArea.innerHTML = '<p class="empty-msg">Aucune fiche enregistrée. Appuyez sur + Ajouter.</p>';
             return;
         }
 
         fichesAffichees.forEach((fiche, index) => {
             const card = document.createElement('div');
             card.className = 'card';
+            card.setAttribute('draggable', 'true');
+            card.dataset.index = index;
+
+            let materielHtml = '';
+            if (fiche.materiels && fiche.materiels.length > 0) {
+                materielHtml = fiche.materiels.map(m => `<span class="badge badge-${m.toLowerCase()}">${m}</span>`).join(' ');
+            } else {
+                materielHtml = '<span class="badge" style="background:#6c757d">Aucun matériel</span>';
+            }
+
+            let statutClass = 'badge-recu';
+            if (fiche.statut === 'à remettre') statutClass = 'badge-a-remettre';
+            else if (fiche.statut === 'à restituer') statutClass = 'badge-a-restituer';
+            else if (fiche.statut === 'non restituable') statutClass = 'badge-non-restituable';
+            else if (fiche.statut === 'restitué') statutClass = 'badge-restitue';
+
+            let dateFormatee = 'Aucune date';
+            if (fiche.date) {
+                const parts = fiche.date.split('-');
+                if (parts.length === 3) {
+                    dateFormatee = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                } else {
+                    dateFormatee = fiche.date;
+                }
+            }
+
             card.innerHTML = `
-                <div class="card-info">
-                    <h3>${fiche.nom}</h3>
-                    <p>${fiche.materiel}</p>
+                <div class="card-content-wrapper">
+                    <span class="drag-handle">☰</span>
+                    <div class="card-info">
+                        <h3>${fiche.nom}</h3>
+                        <div class="tags-container">
+                            ${materielHtml}
+                            <span class="badge ${statutClass}">${fiche.statut}</span>
+                        </div>
+                        <p>📅 ${dateFormatee}</p>
+                    </div>
                 </div>
-                <button class="btn-delete" onclick="supprimerFiche(${index})">Supprimer</button>
+                <div class="card-actions">
+                    <button class="btn-edit" onclick="ouvrirModalEdition(${index})">Modifier</button>
+                    <button class="btn-delete" onclick="supprimerFiche(${index})">Supprimer</button>
+                </div>
             `;
+
+            // Événements pour le glisser-déposer
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragover', handleDragOver);
+            card.addEventListener('drop', handleDrop);
+            card.addEventListener('dragend', handleDragEnd);
+
             contentArea.appendChild(card);
         });
     }
 
+    /* Gestion Drag and Drop */
+    function handleDragStart(e) {
+        draggedIndex = parseInt(this.dataset.index);
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const targetIndex = parseInt(this.dataset.index);
+        if (draggedIndex !== null && draggedIndex !== targetIndex) {
+            const movedItem = fiches.splice(draggedIndex, 1)[0];
+            fiches.splice(targetIndex, 0, movedItem);
+            sauvegarder();
+        }
+    }
+
+    function handleDragEnd() {
+        this.classList.remove('dragging');
+        draggedIndex = null;
+    }
+
     function ouvrirModal() {
+        document.getElementById('modalTitle').innerText = "Ajouter une personne";
+        document.getElementById('editIndex').value = "-1";
         document.getElementById('nomInput').value = '';
-        document.getElementById('materielInput').value = '';
+        document.querySelectorAll('input[name="materiel"]').forEach(cb => cb.checked = false);
+        document.getElementById('statutInput').value = 'reçu';
+        
+        const aujourdHui = new Date().toISOString().split('T')[0];
+        document.getElementById('dateInput').value = aujourdHui;
+
+        document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function ouvrirModalEdition(index) {
+        const fiche = fiches[index];
+        document.getElementById('modalTitle').innerText = "Modifier la fiche";
+        document.getElementById('editIndex').value = index;
+        document.getElementById('nomInput').value = fiche.nom;
+        
+        document.querySelectorAll('input[name="materiel"]').forEach(cb => {
+            cb.checked = fiche.materiels && fiche.materiels.includes(cb.value);
+        });
+
+        document.getElementById('statutInput').value = fiche.statut;
+        document.getElementById('dateInput').value = fiche.date || '';
+
         document.getElementById('addModal').style.display = 'flex';
     }
 
@@ -207,16 +425,29 @@
         document.getElementById('addModal').style.display = 'none';
     }
 
-    function ajouterFiche() {
+    function enregistrerFiche() {
+        const index = parseInt(document.getElementById('editIndex').value);
         const nom = document.getElementById('nomInput').value.trim();
-        const materiel = document.getElementById('materielInput').value.trim();
+        const statutsCheckboxes = document.querySelectorAll('input[name="materiel"]:checked');
+        let materiels = [];
+        statutsCheckboxes.forEach(cb => materiels.push(cb.value));
+
+        const statut = document.getElementById('statutInput').value;
+        const date = document.getElementById('dateInput').value;
 
         if (!nom) {
             alert("Veuillez entrer un nom.");
             return;
         }
 
-        fiches.push({ nom, materiel: materiel || 'Aucun matériel spécifié' });
+        const donneesFiche = { nom, materiels, statut, date };
+
+        if (index === -1) {
+            fiches.push(donneesFiche);
+        } else {
+            fiches[index] = donneesFiche;
+        }
+
         sauvegarder();
         fermerModal();
     }
@@ -231,27 +462,26 @@
     function filtrerFiches() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const fichesFiltrees = fiches.filter(f => 
-            f.nom.toLowerCase().includes(query) || f.materiel.toLowerCase().includes(query)
+            f.nom.toLowerCase().includes(query) || 
+            (f.materiels && f.materiels.some(m => m.toLowerCase().includes(query))) ||
+            f.statut.toLowerCase().includes(query) ||
+            (f.date && f.date.includes(query))
         );
         afficherFiches(fichesFiltrees);
     }
 
     function exporterDonnees() {
         const donnees = JSON.stringify(fiches, null, 2);
-        
         if (fiches.length === 0) {
             alert("Aucune donnée à exporter.");
             return;
         }
-
         const blob = new Blob([donnees], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
         const a = document.createElement('a');
         a.href = url;
         a.download = `sauvegarde_materiel_${new Date().toISOString().slice(0,10)}.json`;
         a.click();
-        
         URL.revokeObjectURL(url);
     }
 
@@ -277,7 +507,6 @@
         lecteur.readAsText(fichier);
     }
 
-    // Chargement initial au démarrage
     afficherFiches();
 </script>
 
