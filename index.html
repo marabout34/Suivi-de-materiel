@@ -322,13 +322,6 @@
         afficherFiches();
     }
 
-    function normaliserClasseMateriel(texte) {
-        if (!texte) return '';
-        return texte.toLowerCase()
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]/g, '');
-    }
-
     function afficherFiches(fichesAffichees = fiches) {
         const contentArea = document.getElementById('contentArea');
         contentArea.innerHTML = '';
@@ -345,8 +338,14 @@
             let materielHtml = '';
             if (fiche.materiels && fiche.materiels.length > 0) {
                 materielHtml = fiche.materiels.map(m => {
-                    const classeCss = normaliserClasseMateriel(m);
-                    return `<span class="badge badge-${classeCss}">${m}</span>`;
+                    // Associe directement le nom exact du matériel à sa classe CSS
+                    let cssClass = 'pc';
+                    if (m === 'Tablette') cssClass = 'tablette';
+                    else if (m === 'Téléphone') cssClass = 'telephone';
+                    else if (m === 'Smartphone') cssClass = 'smartphone';
+                    else if (m === 'Casque') cssClass = 'casque';
+                    
+                    return `<span class="badge badge-${cssClass}">${m}</span>`;
                 }).join(' ');
             } else {
                 materielHtml = '<span class="badge" style="background:#6c757d">Aucun matériel</span>';
@@ -465,4 +464,78 @@
 
         if (!nom) {
             alert("Veuillez entrer un nom.");
-            
+            return;
+        }
+
+        const donneesFiche = { nom, materiels, statut, date };
+
+        if (index === -1) {
+            fiches.push(donneesFiche);
+        } else {
+            fiches[index] = donneesFiche;
+        }
+
+        sauvegarder();
+        fermerModal();
+    }
+
+    function supprimerFiche(index) {
+        if (confirm("Voulez-vous vraiment supprimer cette fiche ?")) {
+            fiches.splice(index, 1);
+            sauvegarder();
+        }
+    }
+
+    function filtrerFiches() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const fichesFiltrees = fiches.filter(f => 
+            (f.nom && f.nom.toLowerCase().includes(query)) || 
+            (f.materiels && f.materiels.some(m => m.toLowerCase().includes(query))) ||
+            (f.statut && f.statut.toLowerCase().includes(query)) ||
+            (f.date && f.date.includes(query))
+        );
+        afficherFiches(fichesFiltrees);
+    }
+
+    function exporterDonnees() {
+        const donnees = JSON.stringify(fiches, null, 2);
+        if (fiches.length === 0) {
+            alert("Aucune donnée à exporter.");
+            return;
+        }
+        const blob = new Blob([donnees], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sauvegarde_materiel_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importerDonnees(event) {
+        const fichier = event.target.files[0];
+        if (!fichier) return;
+
+        const lecteur = new FileReader();
+        lecteur.onload = function(e) {
+            try {
+                const donneesImportees = JSON.parse(e.target.result);
+                if (Array.isArray(donneesImportees)) {
+                    fiches = donneesImportees;
+                    sauvegarder();
+                    alert("Données importées avec succès !");
+                } else {
+                    alert("Format du fichier incorrect.");
+                }
+            } catch (erreur) {
+                alert("Erreur lors de la lecture du fichier de sauvegarde.");
+            }
+        };
+        lecteur.readAsText(fichier);
+    }
+
+    afficherFiches();
+</script>
+
+</body>
+</html>
