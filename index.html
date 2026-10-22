@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suivi Matériel</title>
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Matériel">
+  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Suivi%20Mat%C3%A9riel%22,%22short_name%22:%22Mat%C3%A9riel%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23f8fafc%22,%22theme_color%22:%22%232563eb%22}">
+  
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f8fafc; color: #1e293b; margin: 0; padding: 16px; padding-bottom: 90px; }
+    h1 { font-size: 1.25rem; margin-top: 0; margin-bottom: 12px; text-align: center; color: #0f172a; }
+    
+    .search-box { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; margin-bottom: 16px; outline: none; }
+    
+    .card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 6px solid #ccc; }
+    .card.non_restituable { border-left-color: #ef4444; } /* Rouge */
+    .card.a_remettre { border-left-color: #f97316; }       /* Orange */
+    .card.remis { border-left-color: #eab308; }             /* Jaune */
+    .card.restituable { border-left-color: #22c55e; }       /* Vert */
+    .card.restitue { border-left-color: #3b82f6; }          /* Bleu */
+
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .info .name { font-weight: bold; font-size: 1.05rem; color: #0f172a; }
+    .info .details { font-size: 0.9rem; color: #475569; margin-top: 4px; font-weight: 500; }
+    .info .date-info { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+    
+    .status-select { padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; border: 1px solid #cbd5e1; background: #f1f5f9; cursor: pointer; margin-top: 8px; width: 100%; color: #1e293b; }
+
+    .actions { display: flex; gap: 4px; margin-top: 2px; align-items: center; }
+    .btn-action { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 3px 5px; border-radius: 4px; }
+    .btn-action:hover { background: #f1f5f9; }
+
+    .fab { position: fixed; bottom: 20px; right: 20px; background: #2563eb; color: white; border: none; width: 56px; height: 56px; border-radius: 50%; font-size: 28px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+    .modal-content label.section-label { font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-top: 12px; margin-bottom: 4px; }
+    .modal-content input[type="text"], .modal-content input[type="date"], .modal-content select { width: 100%; padding: 10px; margin-top: 4px; margin-bottom: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; }
+    
+    .checkbox-group { display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 8px; }
+    .checkbox-item { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; font-weight: 500; color: #1e293b; cursor: pointer; }
+    .checkbox-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .btn { padding: 10px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-secondary { background: #94a3b8; color: white; }
+  </style>
+</head>
+<body>
+
+  <h1>Suivi Matériel</h1>
+
+  <input type="text" id="search" class="search-box" placeholder="Rechercher une personne ou un matériel..." oninput="render()">
+
+  <div id="list"></div>
+
+  <button class="fab" onclick="openModal()">+</button>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title" style="margin-top:0">Ajouter / Modifier</h3>
+      <input type="hidden" id="edit-id">
+
+      <label class="section-label">Nom & Prénom</label>
+      <input type="text" id="input-name" placeholder="ex: DUPONT Jean">
+
+      <label class="section-label">Matériel(s) concerné(s)</label>
+      <div class="checkbox-group">
+        <label class="checkbox-item"><input type="checkbox" class="chk-item" value="PC"> 💻 PC</label>
+        <label class="checkbox-item"><input type="checkbox" class="chk-item" value="Téléphone"> 📞 Téléphone</label>
+        <label class="checkbox-item"><input type="checkbox" class="chk-item" value="Smartphone"> 📱 Smartphone</label>
+        <label class="checkbox-item"><input type="checkbox" class="chk-item" value="Tablette"> 📱 Tablette</label>
+        <label class="checkbox-item"><input type="checkbox" class="chk-item" value="Casque"> 🎧 Casque</label>
+      </div>
+
+      <label class="section-label">Étape / Statut</label>
+      <select id="input-status">
+        <option value="non_restituable">🔴 Non restituable</option>
+        <option value="a_remettre">🟠 À remettre (Reçu, à donner)</option>
+        <option value="remis">🟡 Remis à la personne</option>
+        <option value="restituable">🟢 À restituer / Restituable</option>
+        <option value="restitue">🔵 Restitué</option>
+      </select>
+
+      <label class="section-label">Date (Mise à jour / Événement)</label>
+      <input type="date" id="input-date">
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveItem()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Aucune donnée pré-enregistrée sur GitHub pour protéger la confidentialité
+    const defaultData = [];
+
+    let data = JSON.parse(localStorage.getItem('materiel_data_v8')) || defaultData;
+
+    function saveData() {
+      localStorage.setItem('materiel_data_v8', JSON.stringify(data));
+    }
+
+    function changeStatus(id, newStatus) {
+      const currentDate = new Date().toISOString().split('T')[0];
+      data = data.map(item => {
+        if (item.id === id) {
+          item.status = newStatus;
+          item.date = currentDate;
+        }
+        return item;
+      });
+      saveData();
+      render();
+    }
+
+    function moveUp(index) {
+      if (index > 0) {
+        const temp = data[index];
+        data[index] = data[index - 1];
+        data[index - 1] = temp;
+        saveData();
+        render();
+      }
+    }
+
+    function moveDown(index) {
+      if (index < data.length - 1) {
+        const temp = data[index];
+        data[index] = data[index + 1];
+        data[index + 1] = temp;
+        saveData();
+        render();
+      }
+    }
+
+    function deleteItem(id) {
+      if (confirm("Voulez-vous vraiment supprimer cette fiche ?")) {
+        data = data.filter(item => item.id !== id);
+        saveData();
+        render();
+      }
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    }
+
+    function render() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const listEl = document.getElementById('list');
+      listEl.innerHTML = '';
+
+      const isSearching = search.length > 0;
+
+      data.forEach((item, index) => {
+        const itemsStr = Array.isArray(item.items) ? item.items.join(' ') : (item.item || '');
+        const matchSearch = item.name.toLowerCase().includes(search) || itemsStr.toLowerCase().includes(search);
+
+        if (!matchSearch) return;
+
+        const card = document.createElement('div');
+        card.className = `card ${item.status}`;
+
+        const itemsDisplay = Array.isArray(item.items) && item.items.length > 0 
+          ? item.items.join(', ') 
+          : (item.item || 'Aucun matériel coché');
+
+        const displayDate = item.date ? `📅 ${formatDate(item.date)}` : '';
+
+        const moveButtons = isSearching ? '' : `
+          <button class="btn-action" onclick="moveUp(${index})" title="Monter" ${index === 0 ? 'disabled style="opacity:0.3;"' : ''}>⬆️</button>
+          <button class="btn-action" onclick="moveDown(${index})" title="Descendre" ${index === data.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>⬇️</button>
+        `;
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="info">
+              <div class="name">${item.name}</div>
+              <div class="details">📦 ${itemsDisplay}</div>
+              <div class="date-info">${displayDate}</div>
+            </div>
+            <div class="actions">
+              ${moveButtons}
+              <button class="btn-action" onclick="editItem(${item.id})" title="Modifier">✏️</button>
+              <button class="btn-action" onclick="deleteItem(${item.id})" title="Supprimer">🗑️</button>
+            </div>
+          </div>
+          <select class="status-select" onchange="changeStatus(${item.id}, this.value)">
+            <option value="non_restituable" ${item.status === 'non_restituable' ? 'selected' : ''}>🔴 Non restituable</option>
+            <option value="a_remettre" ${item.status === 'a_remettre' ? 'selected' : ''}>🟠 À remettre (Reçu, à donner)</option>
+            <option value="remis" ${item.status === 'remis' ? 'selected' : ''}>🟡 Remis à la personne</option>
+            <option value="restituable" ${item.status === 'restituable' ? 'selected' : ''}>🟢 À restituer / Restituable</option>
+            <option value="restitue" ${item.status === 'restitue' ? 'selected' : ''}>🔵 Restitué</option>
+          </select>
+        `;
+        listEl.appendChild(card);
+      });
+
+      if (listEl.innerHTML === '') {
+        listEl.innerHTML = '<p style="text-align:center; color:#94a3b8; margin-top:30px;">Aucune fiche enregistrée. Appuyez sur + pour ajouter une personne.</p>';
+      }
+    }
+
+    function openModal() {
+      document.getElementById('edit-id').value = '';
+      document.getElementById('modal-title').innerText = 'Ajouter une fiche';
+      document.getElementById('input-name').value = '';
+      document.querySelectorAll('.chk-item').forEach(chk => chk.checked = false);
+      document.getElementById('input-status').value = 'a_remettre';
+      document.getElementById('input-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    function editItem(id) {
+      const item = data.find(d => d.id === id);
+      if (!item) return;
+
+      document.getElementById('edit-id').value = item.id;
+      document.getElementById('modal-title').innerText = 'Modifier la fiche';
+      document.getElementById('input-name').value = item.name;
+
+      const currentItems = Array.isArray(item.items) ? item.items : [item.item];
+      document.querySelectorAll('.chk-item').forEach(chk => {
+        chk.checked = currentItems.includes(chk.value);
+      });
+
+      document.getElementById('input-status').value = item.status;
+      document.getElementById('input-date').value = item.date || new Date().toISOString().split('T')[0];
+      document.getElementById('modal').style.display = 'flex';
+    }
+
+    function saveItem() {
+      const id = document.getElementById('edit-id').value;
+      const name = document.getElementById('input-name').value.trim();
+      const status = document.getElementById('input-status').value;
+      const date = document.getElementById('input-date').value;
+
+      const selectedItems = [];
+      document.querySelectorAll('.chk-item:checked').forEach(chk => {
+        selectedItems.push(chk.value);
+      });
+
+      if (!name) {
+        alert("Veuillez saisir un nom.");
+        return;
+      }
+
+      if (id) {
+        data = data.map(d => d.id == id ? { ...d, name, items: selectedItems, status, date } : d);
+      } else {
+        data.unshift({
+          id: Date.now(),
+          name,
+          items: selectedItems,
+          status,
+          date
+        });
+      }
+
+      saveData();
+      closeModal();
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>
