@@ -41,6 +41,7 @@
         .list-container {
             min-height: 100px;
             margin-bottom: 20px;
+            position: relative;
         }
         .card {
             background: #f8f9fa;
@@ -51,24 +52,24 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            cursor: grab;
             user-select: none;
-            touch-action: manipulation;
+            touch-action: pan-y;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
-        .card:active {
-            cursor: grabbing;
-        }
         .card.dragging {
-            opacity: 0.5;
+            opacity: 0.6;
+            background: #e2e8f0;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
             transform: scale(1.02);
+            z-index: 10;
         }
         .drag-handle {
-            font-size: 1.2rem;
-            color: #aaa;
-            margin-right: 10px;
+            font-size: 1.4rem;
+            color: #888;
+            margin-right: 12px;
+            padding: 8px 4px;
             cursor: grab;
+            touch-action: none;
         }
         .card-content-wrapper {
             display: flex;
@@ -95,7 +96,6 @@
             gap: 5px;
             flex-wrap: wrap;
         }
-        /* Badges Matériel */
         .badge {
             padding: 4px 8px;
             border-radius: 4px;
@@ -106,11 +106,9 @@
         }
         .badge-pc { background-color: #007bff; }
         .badge-tablette { background-color: #17a2b8; }
-        .badge-telephone { background-color: #6f42c1; }
-        .badge-smartphone { background-color: #6f42c1; }
+        .badge-telephone, .badge-smartphone { background-color: #6f42c1; }
         .badge-casque { background-color: #fd7e14; }
 
-        /* Sélecteur de statut interactif en bandeau */
         .status-select {
             display: block;
             width: 100%;
@@ -163,7 +161,6 @@
             margin: 20px 0;
         }
         
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -315,7 +312,6 @@
 
 <script>
     let fiches = JSON.parse(localStorage.getItem('suivi_materiel_fiches')) || [];
-    let draggedIndex = null;
 
     function sauvegarder() {
         localStorage.setItem('suivi_materiel_fiches', JSON.stringify(fiches));
@@ -334,7 +330,6 @@
         fichesAffichees.forEach((fiche, index) => {
             const card = document.createElement('div');
             card.className = 'card';
-            card.setAttribute('draggable', 'true');
             card.dataset.index = index;
 
             let materielHtml = '';
@@ -363,7 +358,7 @@
 
             card.innerHTML = `
                 <div class="card-content-wrapper">
-                    <span class="drag-handle">☰</span>
+                    <span class="drag-handle" ontouchstart="initTouchDrag(event, ${index})">☰</span>
                     <div class="card-info">
                         <h3>${fiche.nom}</h3>
                         <div class="tags-container">
@@ -385,47 +380,58 @@
                 </div>
             `;
 
-            card.addEventListener('dragstart', handleDragStart);
-            card.addEventListener('dragover', handleDragOver);
-            card.addEventListener('drop', handleDrop);
-            card.addEventListener('dragend', handleDragEnd);
-
             contentArea.appendChild(card);
         });
     }
 
-    // Changement direct du statut depuis la fiche et mise à jour de la date du jour
+    /* Gestion tactile spécifique smartphone pour déplacer les fiches */
+    let touchedCardIndex = null;
+    let cardElement = null;
+
+    function initTouchDrag(e, index) {
+        touchedCardIndex = index;
+        cardElement = e.target.closest('.card');
+        cardElement.classList.add('dragging');
+
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd);
+    }
+
+    function handleTouchMove(e) {
+        if (touchedCardIndex === null) return;
+        e.preventDefault();
+
+        const touchLocation = e.touches[0];
+        const targetElement = document.elementFromPoint(touchLocation.clientX, touchLocation.clientY);
+        if (!targetElement) return;
+
+        const overCard = targetElement.closest('.card');
+        if (overCard && overCard !== cardElement) {
+            const targetIndex = parseInt(overCard.dataset.index);
+            if (!isNaN(targetIndex) && targetIndex !== touchedCardIndex) {
+                const item = fiches.splice(touchedCardIndex, 1)[0];
+                fiches.splice(targetIndex, 0, item);
+                touchedCardIndex = targetIndex;
+                sauvegarder();
+            }
+        }
+    }
+
+    function handleTouchEnd() {
+        if (cardElement) {
+            cardElement.classList.remove('dragging');
+        }
+        touchedCardIndex = null;
+        cardElement = null;
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+    }
+
     function changerStatutDirect(index, nouveauStatut) {
         const aujourdHui = new Date().toISOString().split('T')[0];
         fiches[index].statut = nouveauStatut;
         fiches[index].date = aujourdHui;
         sauvegarder();
-    }
-
-    function handleDragStart(e) {
-        draggedIndex = parseInt(this.dataset.index);
-        this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-    }
-
-    function handleDragOver(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    }
-
-    function handleDrop(e) {
-        e.preventDefault();
-        const targetIndex = parseInt(this.dataset.index);
-        if (draggedIndex !== null && draggedIndex !== targetIndex) {
-            const movedItem = fiches.splice(draggedIndex, 1)[0];
-            fiches.splice(targetIndex, 0, movedItem);
-            sauvegarder();
-        }
-    }
-
-    function handleDragEnd() {
-        this.classList.remove('dragging');
-        draggedIndex = null;
     }
 
     function ouvrirModal() {
