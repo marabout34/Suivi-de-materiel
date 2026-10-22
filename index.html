@@ -23,29 +23,11 @@
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
         h1 {
             font-size: 1.4rem;
-            margin: 0;
+            margin-top: 0;
+            margin-bottom: 15px;
             color: #24292e;
-        }
-        .btn-add {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 1.5rem;
-            line-height: 40px;
-            text-align: center;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         input[type="text"] {
             width: 100%;
@@ -58,6 +40,7 @@
         }
         .list-container {
             min-height: 100px;
+            margin-bottom: 20px;
         }
         .card {
             background: #f8f9fa;
@@ -100,6 +83,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            z-index: 1000;
         }
         .modal-content {
             background: white;
@@ -118,3 +102,184 @@
         .btn {
             padding: 10px 15px;
             border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        
+        /* Barre d'actions (Ajout, Export, Import) */
+        .action-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .btn-action {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: white;
+            text-align: center;
+        }
+        .btn-add-main { background-color: #28a745; }
+        .btn-export { background-color: #007bff; }
+        .btn-import { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Suivi Matériel</h1>
+    
+    <input type="text" id="searchInput" placeholder="Rechercher une personne ou un matériel..." oninput="filtrerFiches()">
+    
+    <div id="contentArea" class="list-container">
+        <!-- Les fiches s'afficheront ici -->
+    </div>
+
+    <!-- Barre regroupant le bouton +, Export et Import -->
+    <div class="action-bar">
+        <button class="btn-action btn-add-main" onclick="ouvrirModal()">+ Ajouter</button>
+        <button class="btn-action btn-export" onclick="exporterDonnees()">Exporter</button>
+        <input type="file" id="inputImport" style="display: none;" accept=".json" onchange="importerDonnees(event)">
+        <button class="btn-action btn-import" onclick="document.getElementById('inputImport').click()">Importer</button>
+    </div>
+</div>
+
+<!-- Fenêtre d'ajout (Modal) -->
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <h2>Ajouter une personne</h2>
+        <input type="text" id="nomInput" placeholder="Nom et Prénom">
+        <input type="text" id="materielInput" placeholder="Matériel (ex: PC, Clé, Badge...)">
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+            <button class="btn btn-primary" onclick="ajouterFiche()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let fiches = JSON.parse(localStorage.getItem('suivi_materiel_fiches')) || [];
+
+    function sauvegarder() {
+        localStorage.setItem('suivi_materiel_fiches', JSON.stringify(fiches));
+        afficherFiches();
+    }
+
+    function afficherFiches(fichesAffichees = fiches) {
+        const contentArea = document.getElementById('contentArea');
+        contentArea.innerHTML = '';
+
+        if (fichesAffichees.length === 0) {
+            contentArea.innerHTML = '<p class="empty-msg">Aucune fiche enregistrée. Appuyez sur **+ Ajouter** ci-dessous.</p>';
+            return;
+        }
+
+        fichesAffichees.forEach((fiche, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-info">
+                    <h3>${fiche.nom}</h3>
+                    <p>${fiche.materiel}</p>
+                </div>
+                <button class="btn-delete" onclick="supprimerFiche(${index})">Supprimer</button>
+            `;
+            contentArea.appendChild(card);
+        });
+    }
+
+    function ouvrirModal() {
+        document.getElementById('nomInput').value = '';
+        document.getElementById('materielInput').value = '';
+        document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function fermerModal() {
+        document.getElementById('addModal').style.display = 'none';
+    }
+
+    function ajouterFiche() {
+        const nom = document.getElementById('nomInput').value.trim();
+        const materiel = document.getElementById('materielInput').value.trim();
+
+        if (!nom) {
+            alert("Veuillez entrer un nom.");
+            return;
+        }
+
+        fiches.push({ nom, materiel: materiel || 'Aucun matériel spécifié' });
+        sauvegarder();
+        fermerModal();
+    }
+
+    function supprimerFiche(index) {
+        if (confirm("Voulez-vous vraiment supprimer cette fiche ?")) {
+            fiches.splice(index, 1);
+            sauvegarder();
+        }
+    }
+
+    function filtrerFiches() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const fichesFiltrees = fiches.filter(f => 
+            f.nom.toLowerCase().includes(query) || f.materiel.toLowerCase().includes(query)
+        );
+        afficherFiches(fichesFiltrees);
+    }
+
+    function exporterDonnees() {
+        const donnees = JSON.stringify(fiches, null, 2);
+        
+        if (fiches.length === 0) {
+            alert("Aucune donnée à exporter.");
+            return;
+        }
+
+        const blob = new Blob([donnees], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sauvegarde_materiel_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        
+        URL.revokeObjectURL(url);
+    }
+
+    function importerDonnees(event) {
+        const fichier = event.target.files[0];
+        if (!fichier) return;
+
+        const lecteur = new FileReader();
+        lecteur.onload = function(e) {
+            try {
+                const donneesImportees = JSON.parse(e.target.result);
+                if (Array.isArray(donneesImportees)) {
+                    fiches = donneesImportees;
+                    sauvegarder();
+                    alert("Données importées avec succès !");
+                } else {
+                    alert("Format du fichier incorrect.");
+                }
+            } catch (erreur) {
+                alert("Erreur lors de la lecture du fichier de sauvegarde.");
+            }
+        };
+        lecteur.readAsText(fichier);
+    }
+
+    // Chargement initial au démarrage
+    afficherFiches();
+</script>
+
+</body>
+</html>
