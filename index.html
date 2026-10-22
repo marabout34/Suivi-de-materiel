@@ -110,8 +110,8 @@
         .badge-smartphone { background-color: #6f42c1; }
         .badge-casque { background-color: #fd7e14; }
 
-        /* Badges Statut en bandeau */
-        .status-badge {
+        /* Sélecteur de statut interactif en bandeau */
+        .status-select {
             display: block;
             width: 100%;
             padding: 8px;
@@ -119,14 +119,19 @@
             font-size: 0.9rem;
             font-weight: bold;
             color: white;
-            text-align: center;
+            border: none;
+            outline: none;
+            cursor: pointer;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            appearance: none;
+            -webkit-appearance: none;
+            text-align-last: center;
         }
-        .badge-non-restituable { background-color: #dc3545; }
-        .badge-a-remettre { background-color: #fd7e14; }
-        .badge-remis-personne { background-color: #ffc107; color: #333; }
-        .badge-a-restituer { background-color: #20c997; }
-        .badge-restitue { background-color: #007bff; }
+        .status-non-restituable { background-color: #dc3545; }
+        .status-a-remettre { background-color: #fd7e14; }
+        .status-remis-personne { background-color: #ffc107; color: #333; }
+        .status-a-restituer { background-color: #20c997; }
+        .status-restitue { background-color: #007bff; }
 
         .card-actions {
             display: flex;
@@ -339,12 +344,12 @@
                 materielHtml = '<span class="badge" style="background:#6c757d">Aucun matériel</span>';
             }
 
-            let statutClass = 'badge-non-restituable';
-            if (fiche.statut === 'Non restituable') statutClass = 'badge-non-restituable';
-            else if (fiche.statut === 'À remettre') statutClass = 'badge-a-remettre';
-            else if (fiche.statut === 'Remis à la personne') statutClass = 'badge-remis-personne';
-            else if (fiche.statut === 'À restituer') statutClass = 'badge-a-restituer';
-            else if (fiche.statut === 'Restitué') statutClass = 'badge-restitue';
+            let statusClass = 'status-non-restituable';
+            if (fiche.statut === 'Non restituable') statusClass = 'status-non-restituable';
+            else if (fiche.statut === 'À remettre') statusClass = 'status-a-remettre';
+            else if (fiche.statut === 'Remis à la personne') statusClass = 'status-remis-personne';
+            else if (fiche.statut === 'À restituer') statusClass = 'status-a-restituer';
+            else if (fiche.statut === 'Restitué') statusClass = 'status-restitue';
 
             let dateFormatee = 'Aucune date';
             if (fiche.date) {
@@ -365,7 +370,13 @@
                             ${materielHtml}
                         </div>
                         <p>📅 ${dateFormatee}</p>
-                        <span class="status-badge ${statutClass}">${fiche.statut}</span>
+                        <select class="status-select ${statusClass}" onchange="changerStatutDirect(${index}, this.value)">
+                            <option value="Non restituable" ${fiche.statut === 'Non restituable' ? 'selected' : ''}>Non restituable</option>
+                            <option value="À remettre" ${fiche.statut === 'À remettre' ? 'selected' : ''}>À remettre</option>
+                            <option value="Remis à la personne" ${fiche.statut === 'Remis à la personne' ? 'selected' : ''}>Remis à la personne</option>
+                            <option value="À restituer" ${fiche.statut === 'À restituer' ? 'selected' : ''}>À restituer</option>
+                            <option value="Restitué" ${fiche.statut === 'Restitué' ? 'selected' : ''}>Restitué</option>
+                        </select>
                     </div>
                 </div>
                 <div class="card-actions">
@@ -381,6 +392,14 @@
 
             contentArea.appendChild(card);
         });
+    }
+
+    // Changement direct du statut depuis la fiche et mise à jour de la date du jour
+    function changerStatutDirect(index, nouveauStatut) {
+        const aujourdHui = new Date().toISOString().split('T')[0];
+        fiches[index].statut = nouveauStatut;
+        fiches[index].date = aujourdHui;
+        sauvegarder();
     }
 
     function handleDragStart(e) {
