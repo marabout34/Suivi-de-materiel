@@ -112,43 +112,47 @@
             flex-direction: column;
             gap: 4px;
             margin-left: 10px;
+            width: 90px;
         }
         .action-row {
             display: flex;
             gap: 4px;
         }
-        .btn-move {
-            background: #6c757d;
-            color: white;
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
             border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 6px 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 0.8rem;
             flex: 1;
             text-align: center;
         }
-        .btn-move:hover { background: #5a6268; }
-        .btn-edit {
-            background: #ffc107;
-            color: #333;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            flex: 1;
-        }
         .btn-delete {
             background: #dc3545;
             color: white;
             border: none;
-            padding: 6px 10px;
+            padding: 6px 4px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             flex: 1;
+            text-align: center;
         }
+        .btn-move {
+            background: #e2e8f0;
+            color: #4a5568;
+            border: 1px solid #cbd5e1;
+            padding: 2px 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-move:hover { background: #cbd5e1; }
+
         .empty-msg {
             color: #777;
             text-align: center;
@@ -366,12 +370,12 @@
                 </div>
                 <div class="card-actions">
                     <div class="action-row">
-                        <button class="btn-move" onclick="deplacerFiche(${index}, -1)" title="Monter">▲</button>
-                        <button class="btn-move" onclick="deplacerFiche(${index}, 1)" title="Descendre">▼</button>
-                    </div>
-                    <div class="action-row">
                         <button class="btn-edit" onclick="ouvrirModalEdition(${index})">Modifier</button>
                         <button class="btn-delete" onclick="supprimerFiche(${index})">Supprimer</button>
+                    </div>
+                    <div class="action-row">
+                        <button class="btn-move" onclick="deplacerFiche(${index}, -1)" title="Monter">▲</button>
+                        <button class="btn-move" onclick="deplacerFiche(${index}, 1)" title="Descendre">▼</button>
                     </div>
                 </div>
             `;
@@ -382,7 +386,7 @@
 
     function deplacerFiche(index, direction) {
         const nouvellePosition = index + direction;
-        if (nouvellePosition < 0 || nouvellePosition >= fiches.length) return; // Empêche de sortir des limites
+        if (nouvellePosition < 0 || nouvellePosition >= fiches.length) return;
         
         const item = fiches.splice(index, 1)[0];
         fiches.splice(nouvellePosition, 0, item);
@@ -434,85 +438,4 @@
         const nom = document.getElementById('nomInput').value.trim();
         const statutsCheckboxes = document.querySelectorAll('input[name="materiel"]:checked');
         let materiels = [];
-        statutsCheckboxes.forEach(cb => materiels.push(cb.value));
-
-        const statut = document.getElementById('statutInput').value;
-        const date = document.getElementById('dateInput').value;
-
-        if (!nom) {
-            alert("Veuillez entrer un nom.");
-            return;
-        }
-
-        const donneesFiche = { nom, materiels, statut, date };
-
-        if (index === -1) {
-            fiches.push(donneesFiche);
-        } else {
-            fiches[index] = donneesFiche;
-        }
-
-        sauvegarder();
-        fermerModal();
-    }
-
-    function supprimerFiche(index) {
-        if (confirm("Voulez-vous vraiment supprimer cette fiche ?")) {
-            fiches.splice(index, 1);
-            sauvegarder();
-        }
-    }
-
-    function filtrerFiches() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const fichesFiltrees = fiches.filter(f => 
-            f.nom.toLowerCase().includes(query) || 
-            (f.materiels && f.materiels.some(m => m.toLowerCase().includes(query))) ||
-            f.statut.toLowerCase().includes(query) ||
-            (f.date && f.date.includes(query))
-        );
-        afficherFiches(fichesFiltrees);
-    }
-
-    function exporterDonnees() {
-        const donnees = JSON.stringify(fiches, null, 2);
-        if (fiches.length === 0) {
-            alert("Aucune donnée à exporter.");
-            return;
-        }
-        const blob = new Blob([donnees], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `sauvegarde_materiel_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    function importerDonnees(event) {
-        const fichier = event.target.files[0];
-        if (!fichier) return;
-
-        const lecteur = new FileReader();
-        lecteur.onload = function(e) {
-            try {
-                const donneesImportees = JSON.parse(e.target.result);
-                if (Array.isArray(donneesImportees)) {
-                    fiches = donneesImportees;
-                    sauvegarder();
-                    alert("Données importées avec succès !");
-                } else {
-                    alert("Format du fichier incorrect.");
-                }
-            } catch (erreur) {
-                alert("Erreur lors de la lecture du fichier de sauvegarde.");
-            }
-        };
-        lecteur.readAsText(fichier);
-    }
-
-    afficherFiches();
-</script>
-
-</body>
-</html>
+        statutsCheckboxes.forEach
