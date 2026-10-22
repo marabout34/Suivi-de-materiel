@@ -322,10 +322,9 @@
         afficherFiches();
     }
 
-    // Petite fonction pour uniformiser les noms de matériel pour le CSS (enlève les accents)
-    function normaliserClasseMateriel(materiel) {
-        if (!matériel && !materiel) return '';
-        return materiel.toLowerCase()
+    function normaliserClasseMateriel(texte) {
+        if (!texte) return '';
+        return texte.toLowerCase()
             .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
             .replace(/[^a-z0-9]/g, '');
     }
@@ -466,78 +465,4 @@
 
         if (!nom) {
             alert("Veuillez entrer un nom.");
-            return;
-        }
-
-        const donneesFiche = { nom, materiels, statut, date };
-
-        if (index === -1) {
-            fiches.push(donneesFiche);
-        } else {
-            fiches[index] = donneesFiche;
-        }
-
-        sauvegarder();
-        fermerModal();
-    }
-
-    function supprimerFiche(index) {
-        if (confirm("Voulez-vous vraiment supprimer cette fiche ?")) {
-            fiches.splice(index, 1);
-            sauvegarder();
-        }
-    }
-
-    function filtrerFiches() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const fichesFiltrees = fiches.filter(f => 
-            (f.nom && f.nom.toLowerCase().includes(query)) || 
-            (f.materiels && f.materiels.some(m => m.toLowerCase().includes(query))) ||
-            (f.statut && f.statut.toLowerCase().includes(query)) ||
-            (f.date && f.date.includes(query))
-        );
-        afficherFiches(fichesFiltrees);
-    }
-
-    function exporterDonnees() {
-        const donnees = JSON.stringify(fiches, null, 2);
-        if (fiches.length === 0) {
-            alert("Aucune donnée à exporter.");
-            return;
-        }
-        const blob = new Blob([donnees], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `sauvegarde_materiel_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    function importerDonnees(event) {
-        const fichier = event.target.files[0];
-        if (!fichier) return;
-
-        const lecteur = new FileReader();
-        lecteur.onload = function(e) {
-            try {
-                const donneesImportees = JSON.parse(e.target.result);
-                if (Array.isArray(donneesImportees)) {
-                    fiches = donneesImportees;
-                    sauvegarder();
-                    alert("Données importées avec succès !");
-                } else {
-                    alert("Format du fichier incorrect.");
-                }
-            } catch (erreur) {
-                alert("Erreur lors de la lecture du fichier de sauvegarde.");
-            }
-        };
-        lecteur.readAsText(fichier);
-    }
-
-    afficherFiches();
-</script>
-
-</body>
-</html>
+            
