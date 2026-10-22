@@ -41,7 +41,6 @@
         .list-container {
             min-height: 100px;
             margin-bottom: 20px;
-            position: relative;
         }
         .card {
             background: #f8f9fa;
@@ -52,29 +51,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            user-select: none;
-            touch-action: pan-y;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .card.dragging {
-            opacity: 0.6;
-            background: #e2e8f0;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            transform: scale(1.02);
-            z-index: 10;
-        }
-        .drag-handle {
-            font-size: 1.4rem;
-            color: #888;
-            margin-right: 12px;
-            padding: 8px 4px;
-            cursor: grab;
-            touch-action: none;
-        }
-        .card-content-wrapper {
-            display: flex;
-            align-items: center;
-            flex: 1;
         }
         .card-info {
             flex: 1;
@@ -134,9 +110,25 @@
         .card-actions {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 4px;
             margin-left: 10px;
         }
+        .action-row {
+            display: flex;
+            gap: 4px;
+        }
+        .btn-move {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-move:hover { background: #5a6268; }
         .btn-edit {
             background: #ffc107;
             color: #333;
@@ -145,6 +137,7 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.85rem;
+            flex: 1;
         }
         .btn-delete {
             background: #dc3545;
@@ -154,6 +147,7 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.85rem;
+            flex: 1;
         }
         .empty-msg {
             color: #777;
@@ -330,7 +324,6 @@
         fichesAffichees.forEach((fiche, index) => {
             const card = document.createElement('div');
             card.className = 'card';
-            card.dataset.index = index;
 
             let materielHtml = '';
             if (fiche.materiels && fiche.materiels.length > 0) {
@@ -357,26 +350,29 @@
             }
 
             card.innerHTML = `
-                <div class="card-content-wrapper">
-                    <span class="drag-handle" ontouchstart="initTouchDrag(event, ${index})">☰</span>
-                    <div class="card-info">
-                        <h3>${fiche.nom}</h3>
-                        <div class="tags-container">
-                            ${materielHtml}
-                        </div>
-                        <p>📅 ${dateFormatee}</p>
-                        <select class="status-select ${statusClass}" onchange="changerStatutDirect(${index}, this.value)">
-                            <option value="Non restituable" ${fiche.statut === 'Non restituable' ? 'selected' : ''}>Non restituable</option>
-                            <option value="À remettre" ${fiche.statut === 'À remettre' ? 'selected' : ''}>À remettre</option>
-                            <option value="Remis à la personne" ${fiche.statut === 'Remis à la personne' ? 'selected' : ''}>Remis à la personne</option>
-                            <option value="À restituer" ${fiche.statut === 'À restituer' ? 'selected' : ''}>À restituer</option>
-                            <option value="Restitué" ${fiche.statut === 'Restitué' ? 'selected' : ''}>Restitué</option>
-                        </select>
+                <div class="card-info">
+                    <h3>${fiche.nom}</h3>
+                    <div class="tags-container">
+                        ${materielHtml}
                     </div>
+                    <p>📅 ${dateFormatee}</p>
+                    <select class="status-select ${statusClass}" onchange="changerStatutDirect(${index}, this.value)">
+                        <option value="Non restituable" ${fiche.statut === 'Non restituable' ? 'selected' : ''}>Non restituable</option>
+                        <option value="À remettre" ${fiche.statut === 'À remettre' ? 'selected' : ''}>À remettre</option>
+                        <option value="Remis à la personne" ${fiche.statut === 'Remis à la personne' ? 'selected' : ''}>Remis à la personne</option>
+                        <option value="À restituer" ${fiche.statut === 'À restituer' ? 'selected' : ''}>À restituer</option>
+                        <option value="Restitué" ${fiche.statut === 'Restitué' ? 'selected' : ''}>Restitué</option>
+                    </select>
                 </div>
                 <div class="card-actions">
-                    <button class="btn-edit" onclick="ouvrirModalEdition(${index})">Modifier</button>
-                    <button class="btn-delete" onclick="supprimerFiche(${index})">Supprimer</button>
+                    <div class="action-row">
+                        <button class="btn-move" onclick="deplacerFiche(${index}, -1)" title="Monter">▲</button>
+                        <button class="btn-move" onclick="deplacerFiche(${index}, 1)" title="Descendre">▼</button>
+                    </div>
+                    <div class="action-row">
+                        <button class="btn-edit" onclick="ouvrirModalEdition(${index})">Modifier</button>
+                        <button class="btn-delete" onclick="supprimerFiche(${index})">Supprimer</button>
+                    </div>
                 </div>
             `;
 
@@ -384,47 +380,13 @@
         });
     }
 
-    /* Gestion tactile spécifique smartphone pour déplacer les fiches */
-    let touchedCardIndex = null;
-    let cardElement = null;
-
-    function initTouchDrag(e, index) {
-        touchedCardIndex = index;
-        cardElement = e.target.closest('.card');
-        cardElement.classList.add('dragging');
-
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd);
-    }
-
-    function handleTouchMove(e) {
-        if (touchedCardIndex === null) return;
-        e.preventDefault();
-
-        const touchLocation = e.touches[0];
-        const targetElement = document.elementFromPoint(touchLocation.clientX, touchLocation.clientY);
-        if (!targetElement) return;
-
-        const overCard = targetElement.closest('.card');
-        if (overCard && overCard !== cardElement) {
-            const targetIndex = parseInt(overCard.dataset.index);
-            if (!isNaN(targetIndex) && targetIndex !== touchedCardIndex) {
-                const item = fiches.splice(touchedCardIndex, 1)[0];
-                fiches.splice(targetIndex, 0, item);
-                touchedCardIndex = targetIndex;
-                sauvegarder();
-            }
-        }
-    }
-
-    function handleTouchEnd() {
-        if (cardElement) {
-            cardElement.classList.remove('dragging');
-        }
-        touchedCardIndex = null;
-        cardElement = null;
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
+    function deplacerFiche(index, direction) {
+        const nouvellePosition = index + direction;
+        if (nouvellePosition < 0 || nouvellePosition >= fiches.length) return; // Empêche de sortir des limites
+        
+        const item = fiches.splice(index, 1)[0];
+        fiches.splice(nouvellePosition, 0, item);
+        sauvegarder();
     }
 
     function changerStatutDirect(index, nouveauStatut) {
