@@ -112,7 +112,7 @@
             flex-direction: column;
             gap: 4px;
             margin-left: 10px;
-            width: 90px;
+            width: 80px;
         }
         .action-row {
             display: flex;
@@ -125,7 +125,7 @@
             padding: 6px 4px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             flex: 1;
             text-align: center;
         }
@@ -136,7 +136,7 @@
             padding: 6px 4px;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             flex: 1;
             text-align: center;
         }
@@ -144,7 +144,7 @@
             background: #e2e8f0;
             color: #4a5568;
             border: 1px solid #cbd5e1;
-            padding: 2px 4px;
+            padding: 4px 4px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.75rem;
@@ -375,8 +375,8 @@
                 </div>
                 <div class="card-actions">
                     <div class="action-row">
-                        <button class="btn-edit" onclick="ouvrirModalEdition(${index})">Modifier</button>
-                        <button class="btn-delete" onclick="supprimerFiche(${index})">Supprimer</button>
+                        <button class="btn-edit" onclick="ouvrirModalEdition(${index})" title="Modifier">✏️</button>
+                        <button class="btn-delete" onclick="supprimerFiche(${index})" title="Supprimer">🗑️</button>
                     </div>
                     <div class="action-row">
                         <button class="btn-move" onclick="deplacerFiche(${index}, -1)" title="Monter">▲</button>
