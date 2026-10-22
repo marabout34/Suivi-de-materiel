@@ -75,12 +75,18 @@
             align-items: center;
             flex: 1;
         }
+        .card-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
         .card-info h3 {
-            margin: 0 0 5px 0;
+            margin: 0;
             font-size: 1.1rem;
         }
         .card-info p {
-            margin: 3px 0;
+            margin: 0;
             font-size: 0.85rem;
             color: #555;
         }
@@ -88,26 +94,39 @@
             display: flex;
             gap: 5px;
             flex-wrap: wrap;
-            margin-top: 5px;
         }
-        /* Badges */
+        /* Badges Matériel */
         .badge {
-            padding: 3px 8px;
+            padding: 4px 8px;
             border-radius: 4px;
             font-size: 0.8rem;
             font-weight: bold;
             color: white;
+            text-align: center;
         }
         .badge-pc { background-color: #007bff; }
         .badge-tablette { background-color: #17a2b8; }
-        .badge-telephone, .badge-smartphone { background-color: #6f42c1; }
+        .badge-telephone { background-color: #6f42c1; }
+        .badge-smartphone { background-color: #6f42c1; }
         .badge-casque { background-color: #fd7e14; }
 
-        .badge-recu { background-color: #28a745; }
-        .badge-a-remettre { background-color: #17a2b8; }
-        .badge-a-restituer { background-color: #ffc107; color: #333; }
-        .badge-non-restituable { background-color: #6c757d; }
-        .badge-restitue { background-color: #20c997; }
+        /* Badges Statut en bandeau */
+        .status-badge {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .badge-non-restituable { background-color: #dc3545; }
+        .badge-a-remettre { background-color: #fd7e14; }
+        .badge-remis-personne { background-color: #ffc107; color: #333; }
+        .badge-a-restituer { background-color: #20c997; }
+        .badge-restitue { background-color: #007bff; }
 
         .card-actions {
             display: flex;
@@ -234,7 +253,6 @@
     <input type="text" id="searchInput" placeholder="Rechercher une personne, un matériel ou une date..." oninput="filtrerFiches()">
     
     <div id="contentArea" class="list-container">
-        <!-- Les fiches s'afficheront ici -->
     </div>
 
     <div class="action-bar">
@@ -270,11 +288,11 @@
         <div class="form-group">
             <label>Statut :</label>
             <select id="statutInput">
-                <option value="reçu">Reçu</option>
-                <option value="à remettre">À remettre</option>
-                <option value="à restituer">À restituer</option>
-                <option value="non restituable">Non restituable</option>
-                <option value="restitué">Restitué</option>
+                <option value="Non restituable">Non restituable</option>
+                <option value="À remettre">À remettre</option>
+                <option value="Remis à la personne">Remis à la personne</option>
+                <option value="À restituer">À restituer</option>
+                <option value="Restitué">Restitué</option>
             </select>
         </div>
 
@@ -321,11 +339,12 @@
                 materielHtml = '<span class="badge" style="background:#6c757d">Aucun matériel</span>';
             }
 
-            let statutClass = 'badge-recu';
-            if (fiche.statut === 'à remettre') statutClass = 'badge-a-remettre';
-            else if (fiche.statut === 'à restituer') statutClass = 'badge-a-restituer';
-            else if (fiche.statut === 'non restituable') statutClass = 'badge-non-restituable';
-            else if (fiche.statut === 'restitué') statutClass = 'badge-restitue';
+            let statutClass = 'badge-non-restituable';
+            if (fiche.statut === 'Non restituable') statutClass = 'badge-non-restituable';
+            else if (fiche.statut === 'À remettre') statutClass = 'badge-a-remettre';
+            else if (fiche.statut === 'Remis à la personne') statutClass = 'badge-remis-personne';
+            else if (fiche.statut === 'À restituer') statutClass = 'badge-a-restituer';
+            else if (fiche.statut === 'Restitué') statutClass = 'badge-restitue';
 
             let dateFormatee = 'Aucune date';
             if (fiche.date) {
@@ -344,9 +363,9 @@
                         <h3>${fiche.nom}</h3>
                         <div class="tags-container">
                             ${materielHtml}
-                            <span class="badge ${statutClass}">${fiche.statut}</span>
                         </div>
                         <p>📅 ${dateFormatee}</p>
+                        <span class="status-badge ${statutClass}">${fiche.statut}</span>
                     </div>
                 </div>
                 <div class="card-actions">
@@ -355,7 +374,6 @@
                 </div>
             `;
 
-            // Événements pour le glisser-déposer
             card.addEventListener('dragstart', handleDragStart);
             card.addEventListener('dragover', handleDragOver);
             card.addEventListener('drop', handleDrop);
@@ -365,7 +383,6 @@
         });
     }
 
-    /* Gestion Drag and Drop */
     function handleDragStart(e) {
         draggedIndex = parseInt(this.dataset.index);
         this.classList.add('dragging');
@@ -397,7 +414,7 @@
         document.getElementById('editIndex').value = "-1";
         document.getElementById('nomInput').value = '';
         document.querySelectorAll('input[name="materiel"]').forEach(cb => cb.checked = false);
-        document.getElementById('statutInput').value = 'reçu';
+        document.getElementById('statutInput').value = 'Non restituable';
         
         const aujourdHui = new Date().toISOString().split('T')[0];
         document.getElementById('dateInput').value = aujourdHui;
