@@ -82,7 +82,8 @@
         }
         .badge-pc { background-color: #007bff; }
         .badge-tablette { background-color: #17a2b8; }
-        .badge-telephone, .badge-smartphone { background-color: #6f42c1; }
+        .badge-telephone { background-color: #6f42c1; }
+        .badge-smartphone { background-color: #6f42c1; }
         .badge-casque { background-color: #fd7e14; }
 
         .status-select {
@@ -321,6 +322,14 @@
         afficherFiches();
     }
 
+    // Petite fonction pour uniformiser les noms de matériel pour le CSS (enlève les accents)
+    function normaliserClasseMateriel(materiel) {
+        if (!matériel && !materiel) return '';
+        return materiel.toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, '');
+    }
+
     function afficherFiches(fichesAffichees = fiches) {
         const contentArea = document.getElementById('contentArea');
         contentArea.innerHTML = '';
@@ -336,7 +345,10 @@
 
             let materielHtml = '';
             if (fiche.materiels && fiche.materiels.length > 0) {
-                materielHtml = fiche.materiels.map(m => `<span class="badge badge-${m.toLowerCase()}">${m}</span>`).join(' ');
+                materielHtml = fiche.materiels.map(m => {
+                    const classeCss = normaliserClasseMateriel(m);
+                    return `<span class="badge badge-${classeCss}">${m}</span>`;
+                }).join(' ');
             } else {
                 materielHtml = '<span class="badge" style="background:#6c757d">Aucun matériel</span>';
             }
